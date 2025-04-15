@@ -1,0 +1,189 @@
+{% extends 'main.html' %}
+
+
+{% block content %}
+<!-- <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+<input id="chat-message-input" type="text" size="100"><br>
+<input id="chat-message-submit" type="button" value="Send"> -->
+  
+<body>  
+    <main class="profile-page layout layout--room">
+      <div class="container">
+
+        <div class="room">
+          <div class="room__top">
+            <div class="room__topLeft">
+              <a href="{{request.META.HTTP_REFERER}}">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                  <title>arrow-left</title>
+                  <path
+                    d="M13.723 2.286l-13.723 13.714 13.719 13.714 1.616-1.611-10.96-10.96h27.625v-2.286h-27.625l10.965-10.965-1.616-1.607z"
+                  ></path>
+                </svg>
+              </a>
+              <h3>Study Room</h3>
+            </div>
+            
+            <div class="room__topRight">
+              
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                  <title>remove</title>
+                  <path
+                    d="M27.314 6.019l-1.333-1.333-9.98 9.981-9.981-9.981-1.333 1.333 9.981 9.981-9.981 9.98 1.333 1.333 9.981-9.98 9.98 9.98 1.333-1.333-9.98-9.98 9.98-9.981z"
+                  ></path>
+                </svg>
+              </a>
+            </div>
+
+          </div>
+          <div class="room__box">
+            <div class="room__header">
+              <div class="room__info">
+                <h3>{{room.name}}</h3>
+                <span>{{room.created|timesince}} ago</span>
+              </div>
+            </div>
+
+            <div class="room__conversation">
+              <div id="chat-box" class="chat-box">
+                
+                {% for message in messages %}
+                <div id="chat-message" class="chat-message">
+                  
+                  <div class="thread__top">
+                    <h3>{{message.user.username}}</h3>
+                  </div>
+                    
+                    <p>
+                      {{message.message}}
+                    </p>
+                  
+                </div>
+
+                {% endfor %}
+                
+              </div>
+              {% if request.user.is_authenticated %}
+                <div class="msg-bottom">
+
+                  <div class="input-group">
+                    <input id="chat-message-input" type="text" class="form-control" placeholder="Write message...">
+                    <div class="input-group-append ">
+                      <span class="input-group-text send-icon ">
+                        <input id="chat-message-submit" class="btn btn--main" type="button" value="Send">
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          
+            
+        </div>
+
+        <div class="participants">
+          <h3 class="participants__top">Participants <span>({{participants.count}} Joined)</span></h3>
+          <div class="participants__list scroll">
+            {% for participant in participants %}
+            
+              <a href="{% url 'tutor:user-profile' participant.id %}" class="participant">
+                <p>
+                  <span>{{participant}}</span>
+                </p>
+              </a>
+          
+            {% endfor %}
+          
+        </div>
+      </div>
+
+      </div>
+    </main>
+
+
+
+  {{ room_name|json_script:"room-name" }}
+  <script>
+      const roomName = JSON.parse(document.getElementById('room-name').textContent);
+
+      const chatSocket = new WebSocket(
+          'ws://'
+          + window.location.host
+          + '/ws/chat/'
+          + roomName
+          + '/'
+      );
+
+      chatSocket.onopen = function(event) {
+        console.log("WebSocket connection opened");
+        // You can start sending messages here
+      };
+
+      
+
+      const messages = document.getElementById('chat-box');
+      let shouldScroll = true;
+      
+      function getMessages() {
+          shouldScroll = messages.scrollTop + messages.clientHeight === messages.scrollHeight;
+      }
+
+      function scrollToBottom() {
+          messages.scrollTop = messages.scrollHeight;
+      }
+      scrollToBottom();
+
+
+      // Sending a message
+      chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.message !== "") {
+        const threadElement = document.createElement('div');
+        const authorElement = document.createElement('h3'); // Create a new element for the author
+        const messageElement = document.createElement('p'); // Create a new element for the message
+
+        authorElement.classList.add('thread__top'); 
+
+        authorElement.textContent = data.user; // Set the user content
+        messageElement.textContent = data.message; // Set the message content
+
+        threadElement.appendChild(authorElement);
+        threadElement.appendChild(messageElement);
+
+        threadElement.classList.add('chat-message');
+
+        messages.appendChild(threadElement); // Append the new message element
+        scrollToBottom();
+    }
+};
+
+
+      chatSocket.onclose = function(e) {
+          console.error('Chat socket closed unexpectedly');
+      };
+
+      document.querySelector('#chat-message-input').focus();
+      document.querySelector('#chat-message-input').onkeyup = function(e) {
+          if (e.keyCode === 13) {  // enter, return
+              document.querySelector('#chat-message-submit').click();
+          }
+      };
+
+      // Take message from input field and save it
+      document.querySelector('#chat-message-submit').onclick = function(e) {
+          const messageInputDom = document.querySelector('#chat-message-input');
+          const message = messageInputDom.value;
+          chatSocket.send(JSON.stringify({
+              'message': message
+          }));
+          // Clears input field
+          messageInputDom.value = '';
+      };
+
+
+
+  </script>
+</body>
+
+{% endblock %}
