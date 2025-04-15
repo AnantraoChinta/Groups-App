@@ -1,0 +1,62 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+    <ul>
+
+        
+        {% if is_empty %}
+            <h1>
+                No connection requests at the moment
+            </h1>
+        {% endif %}
+            
+        {% for obj in qs %}
+           <div class="peopleList">
+                <div class="peopleList_People">
+                    <h3>
+                        {{obj.user}}
+                    </h3>
+                    
+                    <br>
+                    
+                    <a href="{% url 'tutor:user-profile' obj.user.id %}">
+                        
+                        <button class="ui">
+                            See Profile
+                        </button>
+
+
+                    </a>
+                    
+                    <br>
+                    <br>
+
+                    <form action="{% url 'tutor:accept-invite' %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="profile-pk" value="{{obj.pk}}">
+                        <button type="submit">
+                            Accept Connection
+                        </button>
+                    </form>
+                    
+                    <br>
+                    
+                    <form action="{% url 'tutor:decline-invite' %}" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="profile-pk" value="{{obj.pk}}">
+                        <button type="submit">
+                            Decline Connection
+                        </button>
+
+                    </form>
+
+                </div>
+           </div>
+        {% endfor %}
+            
+
+    </ul>
+
+
+{% endblock %}
