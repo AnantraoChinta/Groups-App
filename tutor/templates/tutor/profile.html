@@ -1,0 +1,124 @@
+{% extends 'main.html' %}
+
+
+{% block content %}
+
+  <main class="profile-page layout layout--3">
+    <div class="container">
+      <!-- Topics Start -->
+      <div class="topics">
+
+      </div>
+      <!-- Topics End -->
+
+      <!-- Room List Start -->
+      <div class="roomList">
+        <div class="profile">
+          <div class="profile__info">
+            <h3> {{profile.user}} </h3>
+            <p>{{group}}</p>
+            
+            
+            
+              
+          </div>
+          <div class="profile__about">
+            <h3>About</h3>
+            <p>
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequuntur illo tenetur
+              facilis sunt nemo debitis quisquam hic atque aut? Ducimus alias placeat optio
+              accusamus repudiandae quis ab ex exercitationem rem?
+            </p>
+          </div>
+        </div>
+        {% if user == request.user %}
+        
+          <div class="roomList__header">
+            <div>
+              <h2>
+                <a href="{% url 'tutor:invites' %}"> My Invites </a>
+              </h2>
+              <h2>My Connections (Reload for the latest updates): {{profile.get_friends_num}}</h2>
+              <br>
+              
+              {% for friend in profile.get_friends %}
+              <div class="peopleList">
+                <div class="peopleList_People">
+                    <h3>
+                      {{friend}}
+                    </h3>
+                    <br>
+                    <a href="{% url 'tutor:user-profile' friend.id %}">
+                        <button class="ui">
+                            See Profile
+                        </button>
+                    </a>
+                </div>
+              </div>
+                
+              <br>
+                
+              {% endfor %}
+                
+            </div>
+          </div>
+        
+        {% elif obj.user.profile not in profile_request_user.get_friends %}
+          <div class="profile_People">
+                
+            {% if profile in invitations %}
+              <form action="{% url 'tutor:accept-invite' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="profile-pk" value="{{profile.pk}}">
+                <br>
+                <button type="submit">
+                    Accept Connection
+                </button>
+              </form>
+            
+            {% elif profile not in invitations%}
+              {% if request.user in profile.friends.all %}
+                <form action="{% url 'tutor:remove-friend' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="profile_pk" value={{profile.pk}}>
+                    <br>
+                    <button>
+                        Remove from friends
+                    </button>
+                    
+                </form>
+            <!-- If user being friended has received a request, and request user is not friends yet -->
+              {% elif profile in receivers and request.user not in profile.friends.all%}
+                <button>
+                    Waiting for approval...
+                </button>
+              <!-- If the user being friended has not received a request or sent one -->
+              {% else %}
+                  <form action="{% url 'tutor:send-invite' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="profile_pk" value={{profile.pk}}>
+
+                    <br>                
+                    <button type="submit">
+                        Add to friends
+                    </button>
+                  </form>
+              {% endif %}
+            {% endif %}
+            
+          </div>
+        {% endif %}
+          
+
+
+      </div>
+      <!-- Room List End -->
+
+      <!-- Activities Start -->
+      
+      <!-- Activities End -->
+    </div>
+  </main>
+
+
+{% endblock %}

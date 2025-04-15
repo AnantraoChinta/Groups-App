@@ -1,0 +1,97 @@
+{% extends 'main.html' %}
+
+{% block content %}
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+<main class="layout layout--tutoring">
+    <div class="container">
+        <div class="peopleList">
+            <div class="peopleList_header">
+                
+                <h1>
+                {{profile}}
+                </h1>
+                    
+            </div>
+            {% for user in users %}
+                
+                <div class='peopleList_People'>
+                    <div class="container">
+                        <div>
+                            <header>{{user.email}}</header>
+                        </div>
+                        <hr>
+                        <div>
+                            <button name="message" id="message-btn">
+                                <h1>Message</h1>
+                            </button>
+                        </div>
+                        <div>
+                            <form action="{% url 'tutor:confirm_request' user.id %}">
+                                <button name="request" id="request-btn" style="float: right">
+                                    <h1>Request Tutor/Tutee</h1>
+                                </button>
+                            </form>
+                        </div>    
+                    </div>
+
+                    <script type="text/javascript">
+                        
+                        function onRequestSent(){
+                            location.reload()
+                        }
+
+                        var sendRequestBtn = document.getElementById("request-btn")
+                        if(sendRequestBtn != null){
+
+                            sendRequestBtn.addEventListener("click", function(){
+                                sendRequest({{user.id}}, onRequestSent)
+                            })
+                        }
+
+                        function sendRequest(id, uiUpdateFunction){
+
+                            payload = {
+                                "csrfmiddlewaretokem": "{{csrf_token}}",
+                                "receiver_user_id": id,
+                            }
+                            $.ajax({
+                                method: "POST",
+                                
+                                dataType: "json",
+                                url: "{% url 'tutor:send_request' %}",
+                                timeout: 5000,
+                                data: payload,
+                                success: function(data){
+                                    // console.log("Success: " = data)
+                                    
+                                    if(data.response == "Tutor request sent."){
+                                        console.log("hi")
+                                    }
+                                    else if(data.response != null){
+                                        alert(data)
+                                    }
+                                },
+                                error: function(data){
+                                    console.log("frig")
+                                },
+                                complete: function(data){
+                                    uiUpdateFunction()
+                                }
+                            })
+                        }
+
+
+                    </script>
+
+                </div>
+        
+            {% endfor %}
+        </div>
+    </div>
+
+</main>
+
+
+
+{% endblock %} 

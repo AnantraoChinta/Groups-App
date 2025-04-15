@@ -1,0 +1,17 @@
+
+
+{% for room in rooms %}
+    <div class="roomListRoom">
+        
+        <div class="roomListRoom__content">
+            <a href="{% url 'room' room.slug %}">{{room.name}}</a>
+        </div>
+        <div class="roomListRoom__meta">
+            <a href="{% url 'room' room.slug %}" class="roomListRoom__joined">
+                {{room.participants.all.count}} Joined
+            </a>
+        <p class="roomListRoom__topic"> {{room.topic.name}} </p>
+        </div>
+    </div>
+  
+{% endfor %}

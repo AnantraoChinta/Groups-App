@@ -1,0 +1,102 @@
+{% extends 'main.html' %}
+
+{% block content %}
+<main>
+
+    <div class="container">
+        <br>
+
+        <form class="header__search" method="GET" action="{% url 'tutor:all-profiles' %}">
+          <label>
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+              <title>search</title>
+              <path
+                d="M32 30.586l-10.845-10.845c1.771-2.092 2.845-4.791 2.845-7.741 0-6.617-5.383-12-12-12s-12 5.383-12 12c0 6.617 5.383 12 12 12 2.949 0 5.649-1.074 7.741-2.845l10.845 10.845 1.414-1.414zM12 22c-5.514 0-10-4.486-10-10s4.486-10 10-10c5.514 0 10 4.486 10 10s-4.486 10-10 10z"
+              ></path>
+            </svg>
+            <input name="q" placeholder="Search for users..." />
+          </label>
+        </form>
+      
+        <br>
+
+        {% if is_empty %}
+            <h1>
+                No profiles to interact with at the moment
+            </h1>
+        {% endif %}
+        
+
+        {% for obj in object_list %}
+            <div class="peopleList">
+                <div class="peopleList_People">
+                    <h3>
+                        
+                        {{obj.user}}
+                        
+                    </h3>
+                    <br>
+                    <a href="{% url 'tutor:user-profile' obj.user.id %}">
+                        <button class="ui">
+                            See Profile
+                        </button>
+                    </a>
+
+                    {% if obj.user.profile in invitations %}
+                    
+                        <form action="{% url 'tutor:accept-invite' %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile-pk" value="{{obj.pk}}">
+                            <br>
+                            <button type="submit">
+                                Accept Connection
+                            </button>
+                        </form>
+                        
+                    {% else%}
+                        
+                        <!-- If user being friended has received a request, and request user is not friends yet -->
+                        {% if obj.user.profile not in receivers and request.user not in obj.friends.all %}
+                            <form action="{% url 'tutor:send-invite' %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="profile_pk" value={{obj.pk}}>
+            
+                                <br>                
+                                <button type="submit">
+                                    Add to friends
+                                </button>
+                            </form>
+                        {% elif obj.user.profile in receivers %}
+                            <button>
+                                Waiting for approval
+                            </button>
+                        {% elif request.user in obj.friends.all %}
+                            <form action="{% url 'tutor:remove-friend' %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="profile_pk" value={{obj.pk}}>
+                                <br>
+                                <button>
+                                    Remove from friends
+                                </button>
+                                
+                            </form>
+                        {% endif %}
+                            
+                            
+                        
+                    {% endif %}
+                        
+
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+</main>
+    
+        
+
+
+
+{% endblock %}

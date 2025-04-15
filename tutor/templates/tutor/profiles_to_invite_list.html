@@ -1,0 +1,20 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+    <ul>
+
+        
+        {% for item in qs %}
+            <li>
+                
+                {{item}}
+
+            </li>
+        {% endfor %}
+            
+
+    </ul>
+
+
+{% endblock %}
