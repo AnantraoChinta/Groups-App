@@ -32,8 +32,8 @@ def logoutUser(request):
     logout(request)
     return redirect('login')
 
-# Precondition: Form will only be be valid if the email consists of an FRHSD email,
-                # which is can be verified with the Gmail API to determine the FRHSD email actually exists
+# Precondition: Form will only be valid if the email is on the allowed domain,
+                # which can be verified with the Gmail API to confirm the address actually exists
 
 @not_registered
 def registerPage(request):

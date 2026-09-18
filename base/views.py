@@ -69,6 +69,7 @@ def createRoom(request):
     return render(request, 'base/room_form.html', context)
 
 
+@logged_in
 def userProfile(request, pk):
 
     userm = CustomUser.objects.get(id=pk)

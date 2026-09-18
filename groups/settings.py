@@ -10,10 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load a local .env file if python-dotenv is installed. Optional: every setting
+# below also works with plain exported environment variables.
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    pass
+else:
+    load_dotenv(BASE_DIR / '.env')
+
+
+def env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 # Quick-start development settings - unsuitable for production
@@ -22,13 +39,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "DJANGO_SECRET_KEY_REMOVED"
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', True)
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+# SECURITY WARNING: keep the secret key used in production secret!
+# Never hardcode this. Set DJANGO_SECRET_KEY in the environment (or .env).
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY must be set when DEBUG is off. Generate one with: '
+            'python manage.py shell -c '
+            '"from django.core.management.utils import get_random_secret_key; '
+            'print(get_random_secret_key())"'
+        )
+    # Dev-only throwaway key. Regenerated per process, so sessions do not
+    # survive a restart -- set DJANGO_SECRET_KEY locally to avoid that.
+    SECRET_KEY = get_random_secret_key()
+
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost'
+    ).split(',') if h.strip()
+]
 
 
 
@@ -121,7 +154,10 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(
+                os.environ.get('REDIS_HOST', '127.0.0.1'),
+                int(os.environ.get('REDIS_PORT', 6379)),
+            )],
         },
     },
 }
@@ -133,11 +169,12 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'pgdb',
-        'USER': 'postgres',
-        'PASSWORD': 'POSTGRES_PASSWORD_REMOVED',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('POSTGRES_DB', 'pgdb'),
+        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+        # SECURITY WARNING: set POSTGRES_PASSWORD in the environment (or .env).
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         'DISABLE_SERVER_SIDE_CURSORS': True,
 
     }
@@ -192,7 +229,11 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Wide open in development only; set CORS_ALLOWED_ORIGINS in production.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
+]
 
 SOCIALACCOUNT_LOGIN_ON_GET=True
 
@@ -209,7 +250,7 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 ACCOUNT_FORMS = {
-    'signup': 'accounts.forms.UserRegistrationForm'
+    'signup': 'users.forms.UserRegistrationForm'
 }
 
 
@@ -218,7 +259,27 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend'
 ]
 
+# Where LoginRequiredMixin / login_required send unauthenticated users
+LOGIN_URL = 'login'
 # After logging in, redirect to the home page
 LOGIN_REDIRECT_URL = 'home'
 # After logging out, redirect back to the log in page
 LOGOUT_REDIRECT_URL = 'login'
+
+
+# Hardening that only applies once DEBUG is off, so local HTTP dev still works.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
+    # Trust the proxy's forwarded protocol header when terminating TLS upstream.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    CSRF_TRUSTED_ORIGINS = [
+        o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+    ]

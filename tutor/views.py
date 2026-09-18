@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from base.decorators import logged_in
 import json
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import ListView, DetailView
 
 from django.db.models import Q
@@ -16,6 +18,20 @@ from .models import Profile, Relationship
 # Create your views here.
 
 
+# Bouncing back to the Referer header is only safe once we know it points at
+# this site -- otherwise an attacker can use these views as an open redirect.
+def _redirect_back(request, fallback='home'):
+    referer = request.META.get('HTTP_REFERER')
+    if referer and url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(referer)
+    return redirect(fallback)
+
+
+@logged_in
 def invites_received(request):
     profile = Profile.objects.get(user=request.user)
     qs = Relationship.objects.invitations_received(profile)
@@ -33,6 +49,7 @@ def invites_received(request):
 
 
 # Can remove this function
+@logged_in
 def profiles_to_invite_list(request):
     user = request.user
     qs = Profile.objects.get_all_profiles_to_invite(user)
@@ -41,6 +58,7 @@ def profiles_to_invite_list(request):
 
     return render(request, 'tutor/profiles_to_invite_list.html', context)
 
+@logged_in
 def profiles_list(request):
     user = request.user
     qs = Profile.objects.get_all_profiles(user)
@@ -51,6 +69,7 @@ def profiles_list(request):
 
 # Maybe incorporate functionality for adding and removing friends directly from their profile
 
+@logged_in
 def userProfile(request, pk):
     user = CustomUser.objects.get(id=pk)
     profile = Profile.objects.get(user=user)
@@ -73,7 +92,7 @@ def userProfile(request, pk):
     return render(request, 'tutor/profile.html', context)
 
 # Add an invitations object from userProfile
-class ProfileListView(ListView):
+class ProfileListView(LoginRequiredMixin, ListView):
     model = Profile
     template_name = 'tutor/profiles_list.html'
     # context_object_name = 'qs'
@@ -110,6 +129,7 @@ class ProfileListView(ListView):
 
 
 
+@logged_in
 def send_invitation(request):
     if request.method=='POST':
         user = request.user
@@ -120,9 +140,10 @@ def send_invitation(request):
 
         rel = Relationship.objects.create(sender=sender, receiver=receiver, status='sent')
 
-        return redirect(request.META.get('HTTP_REFERER'))
-    return redirect('user-profile')
+        return _redirect_back(request)
+    return redirect('home')
 
+@logged_in
 def remove_from_friends(request):
     if request.method=='POST':
         user = request.user
@@ -139,9 +160,10 @@ def remove_from_friends(request):
         )
 
         rel.delete()
-        return redirect(request.META.get('HTTP_REFERER'))
-    return redirect('user-profile')
+        return _redirect_back(request)
+    return redirect('home')
 
+@logged_in
 def accept_invitation(request):
     if request.method == "POST":
         pk = request.POST.get("profile-pk")
@@ -151,12 +173,13 @@ def accept_invitation(request):
         if rel.status == 'sent':
             rel.status = 'accepted'
             rel.save()
-    return redirect(request.META.get('HTTP_REFERER'))
+    return _redirect_back(request)
 
         
 
 
 
+@logged_in
 def decline_invitation(request):
     if request.method == "POST":
         pk = request.POST.get("profile-pk")
