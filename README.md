@@ -110,17 +110,3 @@ All settings come from environment variables (see `.env.example`):
 With `DJANGO_DEBUG=False`, `settings.py` additionally turns on HSTS, secure
 session and CSRF cookies, SSL redirect, `X-Frame-Options: DENY`, and refuses to
 start without a real secret key.
-
-## Known gaps
-
-- The login page still renders a username/password form, but the credential
-  logic in `users/views.py` is commented out and the `register/` route is
-  disabled — Google SSO is the only working path.
-- `base.views.userProfile` renders `base/profile.html`, which does not exist;
-  the live profile page is `tutor:user-profile`.
-- `SOCIALACCOUNT_LOGIN_ON_GET = True` is needed because the login template
-  links to the provider with a plain `<a href>`. Switching to a POST form would
-  let this be turned off.
-- `data.json` is a fixture of permissions and content types only, not seed
-  content.
-- The `tests.py` files are all still empty.
